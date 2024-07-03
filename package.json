@@ -1,0 +1,68 @@
+{
+  "name": "rcw-omocha-kiki",
+  "version": "1.0.0",
+  "description": "RC Wrapper made for Omocha-Kiki",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "release": "npm-run-all -s compile publish",
+    "production": "npm-run-all -s compile build",
+    "start": "npm-run-all -s compile electron:run",
+    "postinstall": "electron-builder install-app-deps",
+    "dev": "electron-webpack dev",
+    "compile": "npm run tsc-compile",
+    "pack": "electron-builder --dir",
+    "build": "electron-builder",
+    "publish": "electron-builder --win -p always",
+    "tsc-compile": "tsc -p tsconfig.json",
+    "electron:run": "electron . --dev",
+    "electron:serve-tsc": "tsc -w -p tsconfig.serve.json",
+    "electron:serve": "wait-on tcp:4200 && npm run tsc-compile && electron . --inspect=5858 --serve"
+  },
+  "author": "physimo18",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/electron-progressbar": "^1.2.6",
+    "@types/node": "^20.14.9",
+    "electron": "^31.1.0",
+    "electron-builder": "^24.13.3",
+    "npm-run-all": "^4.1.5",
+    "typescript": "^5.5.3"
+  },
+  "dependencies": {
+    "electron-context-menu": "^4.0.1",
+    "electron-progressbar": "^2.2.1",
+    "electron-updater": "^6.2.1"
+  },
+  "build": {
+    "appId": "com.physimo18.rcw-omocha-kiki",
+    "files": [
+      "app/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "extraFiles": [
+      {
+        "from": "assets",
+        "to": "./assets"
+      }
+    ],
+    "directories": {
+      "buildResources": "assets"
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "physimo",
+        "repo": "rcw-omocha-kiki"
+      }
+    ]
+  },
+  "electronWebpack": {
+    "main": {
+      "sourceDirectory": "compiled"
+    },
+    "renderer": {
+      "sourceDirectory": null
+    }
+  }
+}
