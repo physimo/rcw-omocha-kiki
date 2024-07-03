@@ -110,8 +110,8 @@ function createMainWindow() {
             return { action: 'deny' };
         });
 
-        // on minimize, hide to tray
-        window.on("minimize", async (e) => {
+        // on close button, hide to tray
+        window.on("close", async (e) => {
             e.preventDefault();
             // Get all open windows
             const windows = BrowserWindow.getAllWindows()
