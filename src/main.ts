@@ -1,10 +1,17 @@
-////////////////////////////////////////////////// IMPORT //////////////////////////////////////////////////
+////////////////////////////////////////////////// IMPORTS //////////////////////////////////////////////////
 
-import { app, BrowserWindow, screen, Tray, shell, Menu, session } from 'electron';
+import { app, BrowserWindow, screen, Tray, shell, Menu, session, dialog } from 'electron';
 import { exit } from 'process';
 import * as fs from "fs";
+import * as path from 'path';
 import type * as contextMenuType from 'electron-context-menu';
+import type { UpdateHandler } from './updater';
+import "./process"
+const packageJson = JSON.parse(fs.readFileSync(path.join(app.getAppPath(), 'package.json'), 'utf8'));
 const isDev = process.argv.includes('--dev') ? true : false;
+const isStartup = process.argv.includes('--startup') ? true : false;
+let assetPath: string;
+
 
 ////////////////////////////////////////////////// EXPORTS //////////////////////////////////////////////////
 
@@ -76,14 +83,14 @@ function createMainWindow() {
     return new Promise<BrowserWindow>(async (resolve, reject) => {
         console.log("Creating main window...");
         const size = screen.getPrimaryDisplay().workAreaSize;
-
+        const updateHandler: UpdateHandler = new (require("./updater")).UpdateHandler();
         const window = new BrowserWindow({
             x: 0,
             y: 0,
             width: size.width,
             height: size.height,
-            title: `Omocha Kiki`,
-            show: process.argv.includes('--startup') ? false : true
+            title: `Omocha Kiki RCW v${packageJson.version}`,
+            show: isStartup ? false : true
         });
 
         // remove menu as it is useless on production
@@ -122,9 +129,29 @@ function createMainWindow() {
         // destroy object when closed
         window.on('closed', () => { mainWindow = null });
 
+        // initialize update handler
+        updateHandler!.initialize(mainWindow);
+
+        // check for update function
+        function updateCheck() {
+            updateHandler.checkForUpdate()
+                .then(r => {
+                    if (!r) dialog.showMessageBox(mainWindow, { message: "No update available" })
+                })
+        }
+
         // tray
-        trayInstance = new Tray(require("path").resolve("./assets/icon.ico"));
+        trayInstance = new Tray(path.resolve(assetPath + "/icon.ico"));
         const contextMenu = Menu.buildFromTemplate([
+            {
+                label: 'v' + packageJson.version, type: 'normal', enabled: false
+            },
+            {
+                type: 'separator', enabled: false
+            },
+            {
+                label: 'Check for update', type: 'normal', click: updateCheck
+            },
             {
                 label: 'Exit', type: 'normal', click: <any>exit
             }
@@ -147,8 +174,7 @@ function createMainWindow() {
                 // new message
                 if (notification_icon) return;
                 notification_icon = true;
-                window.setOverlayIcon(require("path").resolve("./assets/overlay_notify.ico"), "New message")
-                trayInstance.setImage(require("path").resolve("./assets/icon_notify.ico"))
+                trayInstance.setImage(path.resolve(assetPath + "/icon_notify.ico"))
                 trayInstance.setToolTip("New message")
             }
             else {
@@ -156,17 +182,13 @@ function createMainWindow() {
                 if (!notification_icon) return;
                 notification_icon = false;
                 window.setOverlayIcon(null, "No new message")
-                trayInstance.setImage(require("path").resolve("./assets/icon.ico"))
+                trayInstance.setImage(path.resolve(assetPath + "/icon.ico"))
                 trayInstance.setToolTip("No new message")
             }
         });
 
         // open RC
         window.loadURL(`https://rocket.omocha-kiki.com/home`);
-
-        // call update handler
-        const updateHandler = new (require("./updater")).UpdateHandler();
-        await updateHandler!.initialize(mainWindow);
 
         console.log("Main window created and showing")
         resolve(window);
@@ -177,6 +199,11 @@ function createMainWindow() {
 ////////////////////////////////////////////////// ON READY //////////////////////////////////////////////////
 
 async function appReady() {
+    // determine asset path
+    // startup working directory is in system32
+    if (isStartup) assetPath = path.dirname(app.getPath("exe")) + "\\assets\\"
+    else assetPath = path.resolve("./assets/");
+
     // force appdata folder existence
     if (!fs.existsSync(APPDATA)) fs.mkdirSync(APPDATA, { recursive: true })
 
@@ -216,6 +243,7 @@ async function firstLaunch() {
 
     // register on startup
     app.setLoginItemSettings({
+        name: "RCW Omocha-Kiki",
         openAtLogin: true,
         args: ['--startup']
     });

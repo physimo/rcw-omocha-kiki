@@ -31,7 +31,7 @@ export class UpdateHandler {
 
         dialog.showMessageBox(this.rendererWindow, {
             title: "Update available",
-            message: `New update available\nUpdate now?\n\n\nNew version: v.${info.version}\nRelease notes: ${releaseNotes}`,
+            message: `New update available\nUpdate now?\n\n\nNew version: v.${info.version}\nRelease notes: \n${releaseNotes}`,
             type: "question",
             buttons: ["Download and Update now", "Download and Update on exit", "Not now"]
         }).then((v) => {
@@ -68,7 +68,7 @@ export class UpdateHandler {
         })
     }
 
-    checkForUpdate() {
+    checkForUpdate(): Promise<boolean> {
         return new Promise((resolve, reject) => {
             this.update_prompt_declined = false;
             autoUpdater.checkForUpdates()
