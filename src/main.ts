@@ -10,6 +10,8 @@ import "./process"
 const packageJson = JSON.parse(fs.readFileSync(path.join(app.getAppPath(), 'package.json'), 'utf8'));
 const isDev = process.argv.includes('--dev') ? true : false;
 const isStartup = process.argv.includes('--startup') ? true : false;
+var isHidden: boolean = false;
+let inAppContextDispose: CallableFunction = void 0;
 let assetPath: string;
 
 
@@ -124,6 +126,9 @@ function createMainWindow() {
             const windows = BrowserWindow.getAllWindows()
             // Hide each window
             windows.forEach(window => window.hide())
+            // flick switch and destroy in-app context event listeners
+            isHidden = true;
+            inAppContextDispose()
         })
 
         // destroy object when closed
@@ -161,11 +166,18 @@ function createMainWindow() {
         // open all window on tray click
         // or focus on main window if not in tray
         trayInstance.on('click', () => {
+            // ignore if not hidden
+            if (!isHidden) return;
+            isHidden = false
+
             // Get all open windows
             const windows = BrowserWindow.getAllWindows()
 
             // Show each window
             windows.forEach(window => window.show())
+
+            // reset in-app context menu
+            setContextMenu()
         })
 
         var notification_icon = false
@@ -249,12 +261,12 @@ async function firstLaunch() {
     });
 }
 
-////////////////////////////////////////////////// RUN //////////////////////////////////////////////////
+////////////////////////////////////////////////// IN-APP CONTEXT MENU //////////////////////////////////////////////////
 
-(async () => {
+async function setContextMenu() {
     const contextMenu = (await Function('return import("electron-context-menu")')()).default;
 
-    contextMenu(<contextMenuType.Options>{
+    inAppContextDispose = await contextMenu(<contextMenuType.Options>{
         showSaveImageAs: true,
         showCopyImageAddress: true,
         showCopyVideoAddress: true,
@@ -263,6 +275,13 @@ async function firstLaunch() {
         showSelectAll: false,
         showSaveVideoAs: true
     });
+}
+
+////////////////////////////////////////////////// RUN //////////////////////////////////////////////////
+
+(async () => {
+
+    setContextMenu(); // do not wait
 
     // create main BrowserWindow when electron is ready
     if (app.isReady()) appReady();
