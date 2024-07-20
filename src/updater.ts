@@ -1,5 +1,5 @@
 import { UpdateInfo, autoUpdater } from "electron-updater";
-import { dialog } from 'electron';
+import { app, dialog } from 'electron';
 import type { BrowserWindow } from "electron"
 import { mainWindow } from "./main";
 
@@ -19,7 +19,6 @@ export class UpdateHandler {
             if (this.update_prompt_declined) return;
             else this.promptNewUpdate(info);
 
-
         })
     }
 
@@ -36,24 +35,27 @@ export class UpdateHandler {
             buttons: ["Download and Update now", "Download and Update on exit", "Not now"]
         }).then((v) => {
             if (v.response === 2) return; // index 2 === "Not now";
-
-            if (v.response === 0) mainWindow?.hide();
-
             console.log("Downloading update...");
 
-            const ProgressBar = require('electron-progressbar');
-            var progressBar = new ProgressBar({
-                indeterminate: false,
-                text: 'Downloading update',
-                detail: 'Waiting for connection...'
-            });
+            if (v.response === 0) {
+                mainWindow?.hide();
+
+                const ProgressBar = require('electron-progressbar');
+                var progressBar = new ProgressBar({
+                    indeterminate: false,
+                    text: 'Downloading update',
+                    detail: 'Waiting for connection...'
+                });
+
+
+                autoUpdater.on('download-progress', (progressObj) => {
+                    progressBar.value = Math.round(progressObj.percent)
+                    progressBar.detail = `Update downloaded ${Math.round(progressObj.percent)}%`;
+                })
+            }
 
             autoUpdater.downloadUpdate();
 
-            autoUpdater.on('download-progress', (progressObj) => {
-                progressBar.value = Math.round(progressObj.percent)
-                progressBar.detail = `Update downloaded ${Math.round(progressObj.percent)}%`;
-            })
 
             autoUpdater.on('update-downloaded', (info) => {
                 console.log("Update downloaded");

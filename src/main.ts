@@ -1,12 +1,14 @@
 ////////////////////////////////////////////////// IMPORTS //////////////////////////////////////////////////
 
-import { app, BrowserWindow, screen, Tray, shell, Menu, session, dialog } from 'electron';
+import { app, BrowserWindow, screen, Tray, shell, Menu, session, dialog, clipboard } from 'electron';
 import { exit } from 'process';
 import * as fs from "fs";
 import * as path from 'path';
 import type * as contextMenuType from 'electron-context-menu';
 import type { UpdateHandler } from './updater';
 import "./process"
+import { spawn } from 'child_process';
+import { logArray } from './process';
 const packageJson = JSON.parse(fs.readFileSync(path.join(app.getAppPath(), 'package.json'), 'utf8'));
 const isDev = process.argv.includes('--dev') ? true : false;
 const isStartup = process.argv.includes('--startup') ? true : false;
@@ -145,6 +147,52 @@ function createMainWindow() {
                 })
         }
 
+        // open window function
+        function openWindow() {
+            // ignore if not hidden
+            if (!isHidden) return;
+            isHidden = false
+
+            // Get all open windows
+            const windows = BrowserWindow.getAllWindows()
+
+            // if there's no window, or main window has become null / destroyed
+            if (!windows.length || mainWindow?.isDestroyed()) {
+                try {
+                    // relaunch app
+                    app.relaunch();
+                    app.exit(0);
+                }
+                catch (err) {
+                    // restart from process
+                    process.on('exit', function () {
+                        spawn(process.argv[0], process.argv.slice(1), {
+                            cwd: process.cwd(),
+                            detached: true,
+                            stdio: 'inherit'
+                        });
+                    });
+                    app.exit(0)
+                }
+                finally {
+                    // will reach here if app.exit fails
+                    // force exit from process
+                    process.exit(0)
+                }
+            }
+
+            // Show each window
+            windows.forEach(window => window.show())
+
+            // reset in-app context menu
+            setContextMenu()
+        }
+
+        // copy console log to clipboard
+        function copyLog() {
+            clipboard.writeText(logArray.join("\n"))
+        }
+
         // tray
         trayInstance = new Tray(path.resolve(assetPath + "/icon.ico"));
         const contextMenu = Menu.buildFromTemplate([
@@ -155,7 +203,13 @@ function createMainWindow() {
                 type: 'separator', enabled: false
             },
             {
+                label: 'Open', type: 'normal', click: openWindow
+            },
+            {
                 label: 'Check for update', type: 'normal', click: updateCheck
+            },
+            {
+                label: 'Copy console log', type: 'normal', click: copyLog
             },
             {
                 label: 'Exit', type: 'normal', click: <any>exit
@@ -165,20 +219,7 @@ function createMainWindow() {
 
         // open all window on tray click
         // or focus on main window if not in tray
-        trayInstance.on('click', () => {
-            // ignore if not hidden
-            if (!isHidden) return;
-            isHidden = false
-
-            // Get all open windows
-            const windows = BrowserWindow.getAllWindows()
-
-            // Show each window
-            windows.forEach(window => window.show())
-
-            // reset in-app context menu
-            setContextMenu()
-        })
+        trayInstance.on('click', openWindow)
 
         var notification_icon = false
         window.on('page-title-updated', async (e, title) => {
