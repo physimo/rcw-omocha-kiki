@@ -1,6 +1,6 @@
 {
   "name": "rcw-omocha-kiki",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "RC Wrapper made for Omocha-Kiki",
   "main": "dist/main/main.js",
   "scripts": {

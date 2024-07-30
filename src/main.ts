@@ -12,7 +12,7 @@ import { logArray } from './process';
 const packageJson = JSON.parse(fs.readFileSync(path.join(app.getAppPath(), 'package.json'), 'utf8'));
 const isDev = process.argv.includes('--dev') ? true : false;
 const isStartup = process.argv.includes('--startup') ? true : false;
-var isHidden: boolean = false;
+var isHidden: boolean = isStartup ? true : false;
 let inAppContextDispose: CallableFunction = void 0;
 let assetPath: string;
 
@@ -94,8 +94,15 @@ function createMainWindow() {
             width: size.width,
             height: size.height,
             title: `Omocha Kiki RCW v${packageJson.version}`,
+            webPreferences: {
+                nodeIntegration: true,
+                contextIsolation: true,
+                preload: path.resolve(assetPath + '/preload.js')
+            },
             show: isStartup ? false : true
         });
+
+        if (isDev) window.webContents.openDevTools()
 
         // remove menu as it is useless on production
         window.removeMenu();

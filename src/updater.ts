@@ -65,6 +65,7 @@ export class UpdateHandler {
                     console.log("Installing update...");
 
                     autoUpdater.quitAndInstall();
+                    process.exit()
                 }
             })
         })
