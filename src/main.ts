@@ -6,7 +6,7 @@ import * as fs from "fs";
 import * as path from 'path';
 import type * as contextMenuType from 'electron-context-menu';
 import type { UpdateHandler } from './updater';
-import "./process"
+import "./process";
 import { spawn } from 'child_process';
 import { logArray } from './process';
 const packageJson = JSON.parse(fs.readFileSync(path.join(app.getAppPath(), 'package.json'), 'utf8'));
@@ -101,6 +101,8 @@ function createMainWindow() {
             },
             show: isStartup ? false : true
         });
+
+        mainWindow = window;
 
         if (isDev) window.webContents.openDevTools()
 
@@ -200,6 +202,16 @@ function createMainWindow() {
             clipboard.writeText(logArray.join("\n"))
         }
 
+        function clearCacheAndReload() {
+            const ses = mainWindow.webContents.session;
+
+            // Clear cache
+            ses.clearCache().then(() => {
+                console.log('Cache cleared!');
+                mainWindow.reload(); // Reload the page
+            });
+        }
+
         // tray
         trayInstance = new Tray(path.resolve(assetPath + "/icon.ico"));
         const contextMenu = Menu.buildFromTemplate([
@@ -214,6 +226,9 @@ function createMainWindow() {
             },
             {
                 label: 'Check for update', type: 'normal', click: updateCheck
+            },
+            {
+                label: 'Refresh', type: 'normal', click: clearCacheAndReload
             },
             {
                 label: 'Copy console log', type: 'normal', click: copyLog
